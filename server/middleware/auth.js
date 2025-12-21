@@ -1,8 +1,4 @@
-import { createClerkClient } from '@clerk/express';
-
-const clerkClient = createClerkClient({ 
-  secretKey: process.env.CLERK_SECRET_KEY 
-});
+import { clerkClient } from '@clerk/express';
 
 export const verifyToken = async (req, res, next) => {
   try {
@@ -14,18 +10,19 @@ export const verifyToken = async (req, res, next) => {
 
     const token = authHeader.substring(7);
     
-    // Verify token with Clerk
-    const sessionToken = await clerkClient.verifyToken(token);
+    // Verify token with Clerk using the correct method
+    const payload = await clerkClient.verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY
+    });
     
-    if (!sessionToken || !sessionToken.sub) {
+    if (!payload || !payload.sub) {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    req.userId = sessionToken.sub;
+    req.userId = payload.sub;
     next();
   } catch (error) {
     console.error('Token verification error:', error);
-    res.status(401).json({ error: 'Token verification failed' });
+    res.status(401).json({ error: 'Token verification failed', details: error.message });
   }
 };
-
